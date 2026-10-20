@@ -11,6 +11,9 @@ const schema = z.object({
   FIELD_ENCRYPTION_KEY: z.string().min(32),
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
   TRUSTED_HOSTS: z.string().default('localhost,127.0.0.1'),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().min(1).optional(),
+  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export type Environment = z.infer<typeof schema>;

@@ -10,6 +10,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor.js';
 import { AuditModule } from './infrastructure/audit/audit.module.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { EncryptionModule } from './infrastructure/encryption/encryption.module.js';
+import { EmailModule } from './infrastructure/email/email.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -32,6 +33,7 @@ import { TherapistsModule } from './modules/therapists/therapists.module.js';
     }),
     DatabaseModule,
     EncryptionModule,
+    EmailModule,
     AuditModule,
     HealthModule,
     AuthModule,

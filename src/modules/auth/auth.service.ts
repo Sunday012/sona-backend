@@ -17,6 +17,7 @@ import {
 import { DatabaseService } from '../../infrastructure/database/database.service.js';
 import { EncryptionService } from '../../infrastructure/encryption/encryption.service.js';
 import { AuditService } from '../../infrastructure/audit/audit.service.js';
+import { EmailService } from '../../infrastructure/email/email.service.js';
 import { RegistrationRole, type LoginDto, type RegisterDto } from './auth.dto.js';
 
 interface RefreshClaims {
@@ -33,6 +34,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(input: RegisterDto) {
@@ -90,6 +92,11 @@ export class AuthService {
       select: { id: true, roles: true, status: true },
     });
     const verificationToken = await this.createVerificationToken(user.id);
+    await this.emailService.sendLifecycleEmail({
+      recipient: email,
+      token: verificationToken,
+      type: 'verify-email',
+    });
     await this.audit.write({
       actorId: user.id,
       action: 'user.registered',
@@ -144,7 +151,7 @@ export class AuthService {
   async resendVerification(emailInput: string) {
     const user = await this.database.user.findUnique({
       where: { emailBlindIndex: this.encryption.blindIndex(emailInput) },
-      select: { id: true, emailVerifiedAt: true },
+      select: { id: true, emailVerifiedAt: true, encryptedEmail: true },
     });
     let developmentVerificationToken: string | undefined;
     if (user && !user.emailVerifiedAt) {
@@ -153,6 +160,11 @@ export class AuthService {
         data: { consumedAt: new Date() },
       });
       developmentVerificationToken = await this.createVerificationToken(user.id);
+      await this.emailService.sendLifecycleEmail({
+        recipient: this.encryption.decrypt(user.encryptedEmail),
+        token: developmentVerificationToken,
+        type: 'verify-email',
+      });
     }
     return {
       message: 'If an unverified account exists, a new verification email has been requested',
@@ -165,7 +177,7 @@ export class AuthService {
   async forgotPassword(emailInput: string) {
     const user = await this.database.user.findUnique({
       where: { emailBlindIndex: this.encryption.blindIndex(emailInput) },
-      select: { id: true },
+      select: { id: true, encryptedEmail: true },
     });
     let developmentResetToken: string | undefined;
     if (user) {
@@ -178,6 +190,11 @@ export class AuthService {
         VerificationTokenPurpose.PASSWORD_RESET,
         60 * 60_000,
       );
+      await this.emailService.sendLifecycleEmail({
+        recipient: this.encryption.decrypt(user.encryptedEmail),
+        token: developmentResetToken,
+        type: 'reset-password',
+      });
       await this.audit.write({
         actorId: user.id,
         action: 'user.password_reset_requested',
