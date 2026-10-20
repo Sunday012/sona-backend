@@ -316,8 +316,8 @@ export class AuthService {
     }
   }
 
-  me(userId: string) {
-    return this.database.user.findUniqueOrThrow({
+  async me(userId: string) {
+    const user = await this.database.user.findUniqueOrThrow({
       where: { id: userId },
       select: {
         id: true,
@@ -328,12 +328,24 @@ export class AuthService {
         countryCode: true,
         timezone: true,
         createdAt: true,
-        patient: { select: { onboardingStage: true, onboardingCompletedAt: true } },
+        patient: { select: { onboardingStage: true, onboardingCompletedAt: true, preferredDisplayNameCiphertext: true } },
         provider: {
           select: { onboardingStage: true, onboardingCompletedAt: true, verificationStatus: true },
         },
       },
     });
+    return {
+      ...user,
+      patient: user.patient
+        ? {
+            onboardingStage: user.patient.onboardingStage,
+            onboardingCompletedAt: user.patient.onboardingCompletedAt,
+            displayName: user.patient.preferredDisplayNameCiphertext
+              ? this.encryption.decrypt(user.patient.preferredDisplayNameCiphertext)
+              : null,
+          }
+        : null,
+    };
   }
 
   private async recordFailedLogin(id: string, attempts: number) {
