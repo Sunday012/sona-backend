@@ -56,7 +56,8 @@ export class EmailService {
         }),
       });
       if (!response.ok) {
-        this.logger.error(`Resend rejected lifecycle email (${response.status})`);
+        const details = await response.text();
+        this.logger.error(`Resend rejected lifecycle email (${response.status}): ${details.slice(0, 500)}`);
       }
     } catch (error) {
       this.logger.error('Resend request failed', error instanceof Error ? error.message : String(error));
